@@ -107,7 +107,7 @@ async function sendMessage() {
     addMessage(message, "user");
     input.value = "";
 
-    const res = await fetch(`http://127.0.0.1:9000/chat?message=${encodeURIComponent(message)}`);
+    const res = await fetch(`http://127.0.0.1:8000/chat?message=${encodeURIComponent(message)}`);
     const data = await res.json();
 
     addMessage(data.response, "bot");

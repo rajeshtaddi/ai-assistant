@@ -1,16 +1,33 @@
-from services.weather_tool import get_weather
 from langchain_ollama import ChatOllama
+from langchain_core.messages import HumanMessage
+from services.weather_tool import get_weather
 
+# LLM
 llm = ChatOllama(model="phi")
+
+# tools list
+tools = [get_weather]
+
+# bind tools to model
+llm_with_tools = llm.bind_tools(tools)
+
 
 async def chat_with_ai(message: str):
 
-    # 🔥 Step 1: Detect weather intent manually
-    if "weather" in message.lower():
-        city = message.lower().split("in")[-1].strip()
-        weather = get_weather(city)
-        return weather
+    # send user message
+    response = await llm_with_tools.ainvoke(
+        [HumanMessage(content=message)]
+    )
 
-    # 🔥 Step 2: Otherwise normal AI response
-    response = await llm.ainvoke(message)
+    # if AI wants to call tool
+    if response.tool_calls:
+
+        tool_call = response.tool_calls[0]
+        tool_name = tool_call["name"]
+        tool_args = tool_call["args"]
+
+        if tool_name == "get_weather":
+            result = await get_weather(**tool_args)
+            return result
+
     return response.content

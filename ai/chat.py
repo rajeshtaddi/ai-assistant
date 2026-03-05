@@ -1,20 +1,45 @@
 from langchain_ollama import ChatOllama
-from services.weather_tool import get_weather
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_core.messages import HumanMessage
 
-llm = ChatOllama(model="phi")
+
+
+import os
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+llm = ChatOllama(model="qwen2.5:3b")
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+client = MultiServerMCPClient(
+    {
+        "tools-server": {
+            "command": "python",
+            "args": [os.path.join(BASE_DIR, "mcp_server", "server.py")],
+            "transport": "stdio",
+        }
+    }
+)
+
+llm_with_tools = None
+
+
+async def initialize_tools():
+    global llm_with_tools
+
+    tools = await client.get_tools()   # ✅ MUST await
+    llm_with_tools = llm.bind_tools(tools)
+
 
 async def chat_with_ai(message: str):
 
-    message_lower = message.lower()
+    global llm_with_tools
 
-    # 🔥 Weather detection
-    if "weather" in message_lower:
-        if "in" in message_lower:
-            city = message_lower.split("in")[-1].strip()
-            return await get_weather(city)   # ✅ IMPORTANT
-        else:
-            return "Please specify a city."
+    if llm_with_tools is None:
+        await initialize_tools()
 
-    # Normal AI response
-    response = await llm.ainvoke(message)
+    response = await llm_with_tools.ainvoke(
+        [HumanMessage(content=message)]
+    )
+
     return response.content
