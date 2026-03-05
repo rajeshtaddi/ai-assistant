@@ -1,20 +1,32 @@
 from mcp.server.fastmcp import FastMCP
-import httpx
+import requests
 
 mcp = FastMCP("tools-server")
 
 @mcp.tool()
-async def get_weather(city: str) -> str:
-    url = f"https://wttr.in/{city}?format=j1"
+def get_weather(city: str) -> str:
+    """Get current weather of a city."""
 
-    async with httpx.AsyncClient() as client:
-        r = await client.get(url)
-        data = r.json()
+    try:
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
+        geo = requests.get(geo_url).json()
 
-    temp = data["current_condition"][0]["temp_C"]
-    desc = data["current_condition"][0]["weatherDesc"][0]["value"]
+        if "results" not in geo:
+            return "City not found"
 
-    return f"The weather in {city} is {temp}°C with {desc}."
+        lat = geo["results"][0]["latitude"]
+        lon = geo["results"][0]["longitude"]
+
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+        weather = requests.get(weather_url).json()
+
+        temp = weather["current_weather"]["temperature"]
+        wind = weather["current_weather"]["windspeed"]
+
+        return f"{city}: {temp}°C, Wind {wind} km/h"
+
+    except Exception as e:
+        return f"Weather error: {str(e)}"
 
 
 if __name__ == "__main__":
