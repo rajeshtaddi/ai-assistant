@@ -1,8 +1,11 @@
 fastapi
 uvicorn
 langchain
-langchain-openai
-openai
-python-dotenv
-pydantic-settings
+langchain-core
+langchain-ollama
+langchain-mcp-adapters
+ollama
 httpx
+requests
+mcp
+pydantic
